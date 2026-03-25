@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulbit : Disconnect</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #title {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 40px;
+    pointer-events: none;
+  }
+  #title h1 {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-weight: 700;
+    font-size: clamp(54px, 7.2vw, 120px);
+    color: #fff;
+    letter-spacing: 0.02em;
+  }
+  #cta {
+    pointer-events: all;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    font-size: clamp(16px, 1.6vw, 28px);
+    color: #000;
+    background: #fff;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-decoration: none;
+    padding: 14px 36px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  #cta:hover {
+    background: #000;
+    color: #fff;
+    outline: 1px solid #fff;
+  }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="title">
+  <h1>Bulbit : Disconnect</h1>
+  <a id="cta" href="https://forms.google.com" target="_blank">Knock</a>
+</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+const off    = document.createElement('canvas');
+const offCtx = off.getContext('2d');
+
+let W, H, cx, cy, maxR;
+let offW, offH, cxS, cyS, maxRS;
+
+const CELL = 17;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W / 2; cy = H / 2;
+  maxR = Math.sqrt(W * W + H * H) * 3.0;
+  offW = Math.ceil(W / CELL) + 1;
+  offH = Math.ceil(H / CELL) + 1;
+  off.width  = offW;
+  off.height = offH;
+  cxS   = cx   / CELL;
+  cyS   = cy   / CELL;
+  maxRS = maxR / CELL;
+  buildBgMap();
+}
+
+const PALETTE = [
+  { r: 155, g:  95, b: 212, hex: '#9B5FD4', sym: 'B' },
+  { r: 200, g: 238, b:  58, hex: '#C8EE3A', sym: 'L' },
+  { r: 255, g: 123, b:  46, hex: '#FF7B2E', sym: 'T' },
+  { r: 138, g:  78, b: 200, hex: '#8A4EC8', sym: 'b' },
+  { r: 212, g: 240, b:  74, hex: '#D4F04A', sym: 'i' },
+  { r: 240, g: 160, b:  48, hex: '#F0A030', sym: 'u' },
+  { r: 119, g:  68, b: 204, hex: '#7744CC', sym: 'B' },
+];
+
+function classifyColor(r, g, b) {
+  let best = PALETTE[0], bestDist = Infinity;
+  for (const p of PALETTE) {
+    const d = (r - p.r) ** 2 + (g - p.g) ** 2 + (b - p.b) ** 2;
+    if (d < bestDist) { bestDist = d; best = p; }
+  }
+  return best;
+}
+
+const colorSets = [
+  ['#9B5FD4', '#C8EE3A'],
+  ['#C8EE3A', '#FF7B2E'],
+  ['#FF7B2E', '#9B5FD4'],
+  ['#8A4EC8', '#D4F04A'],
+  ['#F0A030', '#7744CC'],
+];
+
+const starDefs = [
+  { numPoints:  8, innerRatio: 0.40, colors: colorSets[0], phaseOffset: 0,   speed: 0.8, noiseAmp: 0.16 },
+  { numPoints:  7, innerRatio: 0.36, colors: colorSets[1], phaseOffset: 0.5, speed: 0.6, noiseAmp: 0.20 },
+  { numPoints:  9, innerRatio: 0.44, colors: colorSets[2], phaseOffset: 1.0, speed: 0.9, noiseAmp: 0.14 },
+  { numPoints:  6, innerRatio: 0.33, colors: colorSets[3], phaseOffset: 1.5, speed: 0.7, noiseAmp: 0.22 },
+  { numPoints: 10, innerRatio: 0.46, colors: colorSets[4], phaseOffset: 2.0, speed: 1.0, noiseAmp: 0.12 },
+];
+
+const WAVE_COUNT    = 5;
+const LOOP_DURATION = 3.2;
+const WAVE_GAP      = LOOP_DURATION / WAVE_COUNT;
+
+function easeIn(x) { return x * x * x; }
+
+function getProgress(t, i) {
+  const offset = i * WAVE_GAP;
+  const localT = ((t - offset) % LOOP_DURATION + LOOP_DURATION) % LOOP_DURATION;
+  return localT / LOOP_DURATION;
+}
+
+function drawStarSmall(ctx2, t, def, scale) {
+  const outerR = maxRS * scale;
+  const innerR = outerR * def.innerRatio;
+  const n      = def.numPoints;
+  const step   = (Math.PI * 2) / n;
+
+  for (let layer = 0; layer < 2; layer++) {
+    const lr = layer === 0 ? outerR        : outerR * 0.86;
+    const li = layer === 0 ? innerR * 1.15 : innerR * 0.84;
+    ctx2.beginPath();
+    for (let i = 0; i < n; i++) {
+      const oa  = i * step - Math.PI / 2 + def.phaseOffset;
+      const ia  = oa + step / 2;
+      const nf1 = 1 + def.noiseAmp * Math.sin(t * def.speed * 2.1 + i * 2.9 + def.phaseOffset);
+      const nf2 = 1 + def.noiseAmp * 0.45 * Math.cos(t * def.speed * 1.7 + i * 3.3);
+      const ox  = cxS + Math.cos(oa) * lr * nf1;
+      const oy  = cyS + Math.sin(oa) * lr * nf1;
+      const ix  = cxS + Math.cos(ia) * li * nf2;
+      const iy  = cyS + Math.sin(ia) * li * nf2;
+      if (i === 0) ctx2.moveTo(ox, oy); else ctx2.lineTo(ox, oy);
+      ctx2.lineTo(ix, iy);
+    }
+    ctx2.closePath();
+    ctx2.fillStyle = def.colors[layer];
+    ctx2.fill();
+  }
+}
+
+function cellRand(col, row, seed) {
+  const n = col * 7919 + row * 104729 + (seed || 0) * 998244353;
+  return ((Math.sin(n) * 43758.5453) % 1 + 1) % 1;
+}
+
+const ALT_SYMS = ['B', 'u', 'L', 'b', 'i', 'T', 'B', 'u', 'L', '■', '+'];
+let cellData = [];
+
+function buildBgMap() {
+  cellData = [];
+  for (let row = 0; row < offH; row++) {
+    cellData[row] = [];
+    for (let col = 0; col < offW; col++) {
+      const r0 = cellRand(col, row, 0);
+      cellData[row][col] = {
+        bgSym: r0 < 0.08 ? '○' : r0 < 0.12 ? '■' : '+',
+        isFlicker:    cellRand(col, row, 3) < 0.30,
+        flickerSpeed: 1.0 + cellRand(col, row, 4) * 4.0,
+        flickerPhase: cellRand(col, row, 5) * Math.PI * 2,
+        altSym:        ALT_SYMS[Math.floor(cellRand(col, row, 6) * ALT_SYMS.length)],
+        altColorPhase: cellRand(col, row, 10) * Math.PI * 2,
+        isDropout:      cellRand(col, row, 7) < 0.15,
+        dropoutSpeed:   1.5 + cellRand(col, row, 8) * 5.0,
+        dropoutPhase:   cellRand(col, row, 9) * Math.PI * 2,
+      };
+    }
+  }
+}
+
+let startTime = null;
+function frame(ts) {
+  if (!startTime) startTime = ts;
+  const t = (ts - startTime) / 1000;
+
+  offCtx.clearRect(0, 0, offW, offH);
+  const waves = starDefs
+    .map((def, i) => ({ def, scale: easeIn(getProgress(t, i)) }))
+    .sort((a, b) => b.scale - a.scale);
+  for (const { def, scale } of waves) {
+    if (scale > 0.001) drawStarSmall(offCtx, t, def, scale);
+  }
+
+  const imageData = offCtx.getImageData(0, 0, offW, offH);
+  const px        = imageData.data;
+
+  ctx.clearRect(0, 0, W, H);
+  const fontSize   = Math.round(CELL * 0.82);
+  const fontBold   = `bold ${fontSize}px monospace`;
+  const fontThin   = `300 ${Math.round(CELL * 0.65)}px monospace`;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  for (let row = 0; row < offH; row++) {
+    for (let col = 0; col < offW; col++) {
+      const cd  = cellData[row][col];
+      if (cd.isDropout && Math.sin(t * cd.dropoutSpeed + cd.dropoutPhase) > 0.3) continue;
+
+      const x   = col * CELL + CELL / 2;
+      const y   = row * CELL + CELL / 2;
+      const idx = (row * offW + col) * 4;
+      const a   = px[idx + 3];
+
+      if (a < 10) {
+        ctx.font = fontThin;
+        ctx.fillStyle = '#444';
+        ctx.fillText(cd.bgSym, x, y);
+      } else {
+        ctx.font = fontBold;
+        const r = px[idx], g = px[idx + 1], b = px[idx + 2];
+        const entry = classifyColor(r, g, b);
+        const useAlt  = cd.isFlicker && Math.sin(t * cd.flickerSpeed + cd.flickerPhase) > 0.2;
+        const sym     = useAlt ? cd.altSym : entry.sym;
+        const isPixel = sym === '■' || sym === '+';
+        let fillColor = entry.hex;
+        if (useAlt && isPixel) {
+          const others = PALETTE.filter(p => p.hex !== entry.hex);
+          const ci = Math.floor(((Math.sin(t * cd.flickerSpeed * 0.6 + cd.altColorPhase) + 1) / 2) * others.length);
+          fillColor = others[Math.min(ci, others.length - 1)].hex;
+        }
+        ctx.fillStyle = fillColor;
+        ctx.fillText(sym, x, y);
+      }
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+resize();
+window.addEventListener('resize', resize);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
