@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bulbit : Disconnect</title>
+<title>Bulbit Disconnect</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: #000; overflow: hidden; }
@@ -75,37 +75,23 @@
     z-index: 1;
   }
   #title { z-index: 2; }
-  /* 오디오 힌트 */
-  #audio-hint {
-    position: fixed;
-    bottom: 28px;
-    right: 32px;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    color: rgba(255,255,255,0.25);
-    pointer-events: none;
-    z-index: 3;
-    transition: opacity 1s;
-  }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="vignette"></div>
 <div id="title">
-  <h1><span class="t1">Bulbit</span><span class="t2"> : Disconnect</span></h1>
-  <a id="cta" href="https://forms.google.com" target="_blank">Knock</a>
+  <h1><span class="t1">Bulbit</span><span class="t2"> Disconnect</span></h1>
+  <a id="cta" href="https://www.instagram.com/bulbit.seoul/" target="_blank">Knock</a>
 </div>
-<div id="audio-hint">CLICK ANYWHERE TO PLAY AUDIO</div>
- 
+
 <!-- 숨겨진 유튜브 플레이어 -->
 <div id="yt-player" style="position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;bottom:0;left:0;"></div>
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
 var ytPlayer;
 var audioStarted = false;
- 
+
 function onYouTubeIframeAPIReady() {
   ytPlayer = new YT.Player('yt-player', {
     width: '1', height: '1',
@@ -150,15 +136,15 @@ function onYouTubeIframeAPIReady() {
 <script>
 const canvas = document.getElementById('c');
 const ctx    = canvas.getContext('2d');
- 
+
 const off    = document.createElement('canvas');
 const offCtx = off.getContext('2d');
- 
+
 let W, H, cx, cy, maxR;
 let offW, offH, cxS, cyS, maxRS;
- 
+
 const CELL = 17;
- 
+
 function resize() {
   W = canvas.width = window.innerWidth;
   H = canvas.height = window.innerHeight;
@@ -173,7 +159,7 @@ function resize() {
   maxRS = maxR / CELL;
   buildBgMap();
 }
- 
+
 // ── 팔레트: 색상 → 고유 심볼 1:1 매핑 ─────────────────────────────────
 //   기존 도형: + □ ■ ○
 //   글자: B u L b i T (대소문자 혼합)
@@ -187,7 +173,7 @@ const PALETTE = [
   { r: 119, g:  68, b: 204, hex: '#7744CC', sym: 'B' },  // violet (purple 계열)
 ];
 // 배경 심볼: +  ○
- 
+
 function classifyColor(r, g, b) {
   let best = PALETTE[0], bestDist = Infinity;
   for (const p of PALETTE) {
@@ -196,7 +182,7 @@ function classifyColor(r, g, b) {
   }
   return best;
 }
- 
+
 // ── 별 정의 ───────────────────────────────────────────────────────────
 const colorSets = [
   ['#9B5FD4', '#C8EE3A'],
@@ -205,7 +191,7 @@ const colorSets = [
   ['#8A4EC8', '#D4F04A'],
   ['#F0A030', '#7744CC'],
 ];
- 
+
 const starDefs = [
   { numPoints:  8, innerRatio: 0.40, colors: colorSets[0], phaseOffset: 0,   speed: 0.8, noiseAmp: 0.16 },
   { numPoints:  7, innerRatio: 0.36, colors: colorSets[1], phaseOffset: 0.5, speed: 0.6, noiseAmp: 0.20 },
@@ -213,25 +199,25 @@ const starDefs = [
   { numPoints:  6, innerRatio: 0.33, colors: colorSets[3], phaseOffset: 1.5, speed: 0.7, noiseAmp: 0.22 },
   { numPoints: 10, innerRatio: 0.46, colors: colorSets[4], phaseOffset: 2.0, speed: 1.0, noiseAmp: 0.12 },
 ];
- 
+
 const WAVE_COUNT    = 5;
 const LOOP_DURATION = 3.2;
 const WAVE_GAP      = LOOP_DURATION / WAVE_COUNT;
- 
+
 function easeIn(x) { return x * x * x; }
- 
+
 function getProgress(t, i) {
   const offset = i * WAVE_GAP;
   const localT = ((t - offset) % LOOP_DURATION + LOOP_DURATION) % LOOP_DURATION;
   return localT / LOOP_DURATION;
 }
- 
+
 function drawStarSmall(ctx2, t, def, scale) {
   const outerR = maxRS * scale;
   const innerR = outerR * def.innerRatio;
   const n      = def.numPoints;
   const step   = (Math.PI * 2) / n;
- 
+
   for (let layer = 0; layer < 2; layer++) {
     const lr = layer === 0 ? outerR        : outerR * 0.86;
     const li = layer === 0 ? innerR * 1.15 : innerR * 0.84;
@@ -253,15 +239,15 @@ function drawStarSmall(ctx2, t, def, scale) {
     ctx2.fill();
   }
 }
- 
+
 // ── 셀 랜덤 유틸 ─────────────────────────────────────────────────────
 function cellRand(col, row, seed) {
   const n = col * 7919 + row * 104729 + (seed || 0) * 998244353;
   return ((Math.sin(n) * 43758.5453) % 1 + 1) % 1;
 }
- 
+
 const ALT_SYMS = ['B', 'u', 'L', 'b', 'i', 'T', 'B', 'u', 'L', '■', '+'];
- 
+
 // 셀별 고정 노이즈 데이터
 let cellData = [];
 function buildBgMap() {
@@ -273,7 +259,7 @@ function buildBgMap() {
       cellData[row][col] = {
         // 배경 심볼: + 88%, ○ 8%, ■ 4%
         bgSym: r0 < 0.08 ? '○' : r0 < 0.12 ? '■' : '+',
- 
+
         // 심볼 깜빡임 (전체 셀의 약 30%)
         isFlicker:    cellRand(col, row, 3) < 0.30,
         flickerSpeed: 1.0 + cellRand(col, row, 4) * 4.0,
@@ -281,7 +267,7 @@ function buildBgMap() {
         altSym:        ALT_SYMS[Math.floor(cellRand(col, row, 6) * ALT_SYMS.length)],
         // 픽셀(■)의 색상 전환 위상 — 렌더 시 현재 구역 컬러 제외 후 동적 선택
         altColorPhase: cellRand(col, row, 10) * Math.PI * 2,
- 
+
         // 드롭아웃 (전체 셀의 약 15%: 배경 포함 가끔 사라짐)
         isDropout:     cellRand(col, row, 7) < 0.15,
         dropoutSpeed:  1.5 + cellRand(col, row, 8) * 5.0,
@@ -290,14 +276,14 @@ function buildBgMap() {
     }
   }
 }
- 
+
 // ── 메인 루프 ────────────────────────────────────────────────────────
 let startTime = null;
- 
+
 function frame(ts) {
   if (!startTime) startTime = ts;
   const t = (ts - startTime) / 1000;
- 
+
   // 1. 소형 오프스크린에 별 그리기
   offCtx.clearRect(0, 0, offW, offH);
   const waves = starDefs
@@ -306,11 +292,11 @@ function frame(ts) {
   for (const { def, scale } of waves) {
     if (scale > 0.001) drawStarSmall(offCtx, t, def, scale);
   }
- 
+
   // 2. 픽셀 색상 샘플링
   const imageData = offCtx.getImageData(0, 0, offW, offH);
   const px        = imageData.data;
- 
+
   // 3. 메인 캔버스에 심볼 그리기
   ctx.clearRect(0, 0, W, H);
   const fontSize   = Math.round(CELL * 0.82);
@@ -318,19 +304,19 @@ function frame(ts) {
   const fontThin   = `300 ${Math.round(CELL * 0.65)}px monospace`;
   ctx.textAlign    = 'center';
   ctx.textBaseline = 'middle';
- 
+
   for (let row = 0; row < offH; row++) {
     for (let col = 0; col < offW; col++) {
       const cd  = cellData[row][col];
- 
+
       // ① 드롭아웃: 해당 셀이 주기적으로 완전히 사라짐
       if (cd.isDropout && Math.sin(t * cd.dropoutSpeed + cd.dropoutPhase) > 0.3) continue;
- 
+
       const x   = col * CELL + CELL / 2;  // 그리드 정렬 유지
       const y   = row * CELL + CELL / 2;
       const idx = (row * offW + col) * 4;
       const a   = px[idx + 3];
- 
+
       if (a < 10) {
         // 배경 셀 — 얇은 폰트 + 글로우
         ctx.font = fontThin;
@@ -345,7 +331,7 @@ function frame(ts) {
         ctx.font = fontBold;
         const r     = px[idx], g = px[idx + 1], b = px[idx + 2];
         const entry = classifyColor(r, g, b);
- 
+
         // ③ 심볼 깜빡임: 일부 셀이 느리게 다른 심볼로 교체됨
         const useAlt  = cd.isFlicker && Math.sin(t * cd.flickerSpeed + cd.flickerPhase) > 0.2;
         const sym     = useAlt ? cd.altSym : entry.sym;
@@ -363,10 +349,10 @@ function frame(ts) {
       }
     }
   }
- 
+
   requestAnimationFrame(frame);
 }
- 
+
 resize();
 window.addEventListener('resize', resize);
 requestAnimationFrame(frame);
